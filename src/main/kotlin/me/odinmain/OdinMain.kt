@@ -39,7 +39,7 @@ object OdinMain {
 
     var display: GuiScreen? = null
     inline val isLegitVersion: Boolean
-        get() = Loader.instance().activeModList.none { it.modId == "odclient" }
+        get() = Loader.instance().activeModList.none { it.modId == "odclientksdhfksdhfgioaghfiahfoisfgsailhfoiwag" }
 
     fun init() {
         PBConfig.loadConfig()
