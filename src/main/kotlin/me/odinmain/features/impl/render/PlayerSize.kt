@@ -35,7 +35,7 @@ object PlayerSize : Module(
     private val forceDevFeatures by BooleanSetting("Force Dev Features", false, desc = "Enable dev features for your own player.")
     private val devWings by BooleanSetting("Wings", false, desc = "Toggles dragon wings.").withDependency { isRandom }
     private val devWingsColor by ColorSetting("Wings Color", Colors.WHITE, desc = "Color of the dev wings.").withDependency { devWings && isRandom }
-    private val wingsYOffset by NumberSetting("Wings Y Offset", 1.25f, -10f, 10f, 0.05, desc = "Vertical offset for wings.")
+    private val wingsYOffset by NumberSetting("Wings Y Offset", 1.25f, 0f, 2f, 0.01, desc = "Vertical offset for wings.")
     .withDependency { devWings && isRandom }
     private var showHidden by DropdownSetting("Show Hidden", false)
     .withDependency { randoms.containsKey(mc.session?.username) }
