@@ -32,6 +32,7 @@ object PlayerSize : Module(
     private val devSizeX by NumberSetting("Size X", 1f, -10, 10f, 0.1, desc = "X scale of the dev size.")
     private val devSizeY by NumberSetting("Size Y", 1f, -10, 10f, 0.1, desc = "Y scale of the dev size.")
     private val devSizeZ by NumberSetting("Size Z", 1f, -10, 10f, 0.1, desc = "Z scale of the dev size.")
+    private val forceDevFeatures by BooleanSetting("Force Dev Features", false, desc = "Enable dev features for your own player.")
     private val devWings by BooleanSetting("Wings", false, desc = "Toggles dragon wings.").withDependency { isRandom }
     private val devWingsColor by ColorSetting("Wings Color", Colors.WHITE, desc = "Color of the dev wings.").withDependency { devWings && isRandom }
     private var showHidden by DropdownSetting("Show Hidden", false).withDependency { isRandom }
@@ -46,7 +47,7 @@ object PlayerSize : Module(
     }.withDependency { isRandom }
 
     private var randoms: HashMap<String, RandomPlayer> = HashMap()
-    val isRandom get() = randoms.containsKey(mc.session?.username)
+    val isRandom get() = randoms.containsKey(mc.session?.username) || forceDevFeatures
 
     data class RandomPlayer(val scale: Triple<Float, Float, Float>, val wings: Boolean = false, val wingsColor: Color = Colors.WHITE, val customName: String, val isDev: Boolean)
 
@@ -87,12 +88,28 @@ object PlayerSize : Module(
 
     @SubscribeEvent
     fun onRenderPlayer(event: RenderPlayerEvent.Post) {
-        if (!randoms.containsKey(event.entity.name)) return
-        if (!devSize && event.entity.name == mc.thePlayer.name) return
-        val random = randoms[event.entity.name] ?: return
-        if (!random.wings) return
-        DragonWings.renderWings(event.entityPlayer, event.partialRenderTick, random)
+        val name = event.entity.name
+
+        val random = randoms[name]
+
+        if (random != null) {
+            // Normal dev rendering
+            if (!random.wings) return
+            if (!devSize && name == mc.thePlayer.name) return
+            DragonWings.renderWings(event.entityPlayer, event.partialRenderTick, random)
+        } else if (forceDevFeatures && name == mc.thePlayer.name && devWings) {
+            // Local clientside-only wings rendering
+            val localRandom = RandomPlayer(
+                scale = Triple(devSizeX, devSizeY, devSizeZ),
+                wings = devWings,
+                wingsColor = devWingsColor,
+                customName = "",
+                isDev = false
+            )
+            DragonWings.renderWings(event.entityPlayer, event.partialRenderTick, localRandom)
+        }
     }
+
 
     fun replaceText(text: String?): String? {
         var replacedText = text
