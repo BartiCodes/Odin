@@ -44,7 +44,7 @@ object PlayerSize : Module(
             modMessage(sendDataToServer(body = "${mc.thePlayer.name}, [${devWingsColor.red},${devWingsColor.green},${devWingsColor.blue}], [$devSizeX,$devSizeY,$devSizeZ], $devWings, , $passcode", "https://tj4yzotqjuanubvfcrfo7h5qlq0opcyk.lambda-url.eu-north-1.on.aws/"))
             updateCustomProperties()
         }
-    }.withDependency { isRandom }
+    }.withDependency { isRandom && !forceDevFeatures}
 
     private var randoms: HashMap<String, RandomPlayer> = HashMap()
     val isRandom get() = randoms.containsKey(mc.session?.username) || forceDevFeatures
