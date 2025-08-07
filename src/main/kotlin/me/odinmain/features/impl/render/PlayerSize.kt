@@ -35,6 +35,8 @@ object PlayerSize : Module(
     private val forceDevFeatures by BooleanSetting("Force Dev Features", false, desc = "Enable dev features for your own player.")
     private val devWings by BooleanSetting("Wings", false, desc = "Toggles dragon wings.").withDependency { isRandom }
     private val devWingsColor by ColorSetting("Wings Color", Colors.WHITE, desc = "Color of the dev wings.").withDependency { devWings && isRandom }
+    private val wingsYOffset by NumberSetting("Wings Y Offset", 1.25f, -10f, 10f, 0.05)
+    .withDependency { devWings && isRandom }
     private var showHidden by DropdownSetting("Show Hidden", false)
     .withDependency { randoms.containsKey(mc.session?.username) }
 
@@ -170,7 +172,7 @@ private val sendDevData by ActionSetting("Send Dev Data", desc = "Sends dev data
             GlStateManager.scale(-0.2, -0.2, 0.2)
             GlStateManager.scale(random.scale.first, random.scale.second, random.scale.third)
             GlStateManager.rotate(180 + rotation, 0f, 1f, 0f)
-            GlStateManager.translate(0.0, -(1.25 / 0.2f), 0.0)
+            GlStateManager.translate(0.0, -wingsYOffset / 0.2f, 0.0)
             GlStateManager.translate(0.0, 0.0, 0.25)
 
             if (player.isSneaking) {
