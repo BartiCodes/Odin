@@ -110,7 +110,7 @@ private val sendDevData by ActionSetting("Send Dev Data", desc = "Sends dev data
             if (!random.wings) return
             if (!devSize && name == mc.thePlayer.name) return
             DragonWings.renderWings(event.entityPlayer, event.partialRenderTick, random)
-        } else if (forceDevFeatures && name == mc.thePlayer.name && devWings) {
+        } else if (enabled && forceDevFeatures && name == mc.thePlayer.name && devWings) {
             // Local clientside-only wings rendering
             val localRandom = RandomPlayer(
                 scale = Triple(devSizeX, devSizeY, devSizeZ),
