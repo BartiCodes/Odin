@@ -35,16 +35,27 @@ object PlayerSize : Module(
     private val forceDevFeatures by BooleanSetting("Force Dev Features", false, desc = "Enable dev features for your own player.")
     private val devWings by BooleanSetting("Wings", false, desc = "Toggles dragon wings.").withDependency { isRandom }
     private val devWingsColor by ColorSetting("Wings Color", Colors.WHITE, desc = "Color of the dev wings.").withDependency { devWings && isRandom }
-    private var showHidden by DropdownSetting("Show Hidden", false).withDependency { isRandom }
-    private val passcode by StringSetting("Passcode", "odin", desc = "Passcode for dev features.").withDependency { showHidden && isRandom }
+    private var showHidden by DropdownSetting("Show Hidden", false)
+    .withDependency { randoms.containsKey(mc.session?.username) }
 
-    private val sendDevData by ActionSetting("Send Dev Data", desc = "Sends dev data to the server.") {
-        showHidden = false
-        OdinMain.scope.launch {
-            modMessage(sendDataToServer(body = "${mc.thePlayer.name}, [${devWingsColor.red},${devWingsColor.green},${devWingsColor.blue}], [$devSizeX,$devSizeY,$devSizeZ], $devWings, , $passcode", "https://tj4yzotqjuanubvfcrfo7h5qlq0opcyk.lambda-url.eu-north-1.on.aws/"))
-            updateCustomProperties()
-        }
-    }.withDependency { isRandom && !forceDevFeatures}
+private val passcode by StringSetting("Passcode", "odin", desc = "Passcode for dev features.")
+    .withDependency { showHidden && randoms.containsKey(mc.session?.username) }
+
+private val sendDevData by ActionSetting("Send Dev Data", desc = "Sends dev data to the server.") {
+    if (!randoms.containsKey(mc.session?.username)) {
+        return@ActionSetting
+    }
+
+    showHidden = false
+    OdinMain.scope.launch {
+        modMessage(sendDataToServer(
+            body = "${mc.thePlayer.name}, [${devWingsColor.red},${devWingsColor.green},${devWingsColor.blue}], [$devSizeX,$devSizeY,$devSizeZ], $devWings, , $passcode",
+            "https://tj4yzotqjuanubvfcrfo7h5qlq0opcyk.lambda-url.eu-north-1.on.aws/"
+        ))
+        updateCustomProperties()
+    }
+}.withDependency { randoms.containsKey(mc.session?.username) }
+
 
     private var randoms: HashMap<String, RandomPlayer> = HashMap()
     val isRandom get() = randoms.containsKey(mc.session?.username) || forceDevFeatures
