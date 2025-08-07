@@ -172,7 +172,7 @@ private val sendDevData by ActionSetting("Send Dev Data", desc = "Sends dev data
             GlStateManager.scale(-0.2, -0.2, 0.2)
             GlStateManager.scale(random.scale.first, random.scale.second, random.scale.third)
             GlStateManager.rotate(180 + rotation, 0f, 1f, 0f)
-            GlStateManager.translate(0.0, -wingsYOffset / 0.2f, 0.0)
+            GlStateManager.translate(0.0, -(PlayerSize.wingsYOffset / 0.2f), 0.0)
             GlStateManager.translate(0.0, 0.0, 0.25)
 
             if (player.isSneaking) {
