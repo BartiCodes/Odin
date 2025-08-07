@@ -7,6 +7,7 @@ import me.odinmain.clickgui.settings.impl.KeybindSetting
 import me.odinmain.events.impl.ChatPacketEvent
 import me.odinmain.events.impl.InputEvent
 import me.odinmain.events.impl.PacketEvent
+import me.odinmain.events.impl.ServerTickEvent
 import me.odinmain.features.impl.dungeon.*
 import me.odinmain.features.impl.dungeon.dungeonwaypoints.DungeonWaypoints
 import me.odinmain.features.impl.dungeon.puzzlesolvers.PuzzleSolvers
@@ -24,7 +25,6 @@ import me.odinmain.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.ScaledResolution
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.network.Packet
-import net.minecraft.network.play.server.S32PacketConfirmTransaction
 import net.minecraftforge.client.event.RenderGameOverlayEvent
 import net.minecraftforge.event.world.WorldEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -102,20 +102,24 @@ object ModuleManager {
     }
 
     private fun tickTaskTick(server: Boolean = false) {
-        tickTasks.removeAll { tickTask ->
-            if (tickTask.server != server) return@removeAll false
+        tickTasks.removeIf { tickTask ->
+            if (tickTask.server != server) return@removeIf false
             if (tickTask.ticksLeft <= 0) {
                 runCatching { tickTask.function() }.onFailure { logError(it, this) }
-                return@removeAll true
+                return@removeIf true
             }
             tickTask.ticksLeft--
             false
         }
     }
 
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent) {
+        tickTaskTick(true)
+    }
+
     @SubscribeEvent(receiveCanceled = true)
     fun onReceivePacket(event: PacketEvent.Receive) {
-        if (event.packet is S32PacketConfirmTransaction) tickTaskTick(true)
         packetFunctions.forEach {
             if (it.shouldRun() && it.type.isInstance(event.packet)) it.function(event.packet)
         }

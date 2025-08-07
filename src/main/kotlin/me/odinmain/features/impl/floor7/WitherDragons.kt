@@ -6,11 +6,13 @@ import me.odinmain.clickgui.settings.impl.DropdownSetting
 import me.odinmain.clickgui.settings.impl.NumberSetting
 import me.odinmain.clickgui.settings.impl.SelectorSetting
 import me.odinmain.events.impl.ArrowEvent
+import me.odinmain.events.impl.ServerTickEvent
 import me.odinmain.features.Module
 import me.odinmain.features.impl.floor7.DragonCheck.dragonSpawn
 import me.odinmain.features.impl.floor7.DragonCheck.dragonSprayed
 import me.odinmain.features.impl.floor7.DragonCheck.dragonUpdate
 import me.odinmain.features.impl.floor7.DragonCheck.lastDragonDeath
+import me.odinmain.features.impl.floor7.KingRelics.relicEquipment
 import me.odinmain.features.impl.floor7.KingRelics.relicsBlockPlace
 import me.odinmain.features.impl.floor7.KingRelics.relicsOnMessage
 import me.odinmain.features.impl.floor7.KingRelics.relicsOnWorldLast
@@ -24,12 +26,17 @@ import me.odinmain.utils.runOnMCThread
 import me.odinmain.utils.skyblock.dungeon.DungeonUtils
 import me.odinmain.utils.skyblock.dungeon.M7Phases
 import me.odinmain.utils.skyblock.modMessage
+import me.odinmain.utils.skyblock.skyblockID
 import me.odinmain.utils.toFixed
 import me.odinmain.utils.ui.drawStringWidth
 import me.odinmain.utils.ui.getTextWidth
 import net.minecraft.entity.boss.EntityDragonPart
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement
-import net.minecraft.network.play.server.*
+import net.minecraft.network.play.server.S04PacketEntityEquipment
+import net.minecraft.network.play.server.S0FPacketSpawnMob
+import net.minecraft.network.play.server.S1CPacketEntityMetadata
+import net.minecraft.network.play.server.S2APacketParticles
 import net.minecraftforge.client.event.RenderWorldLastEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 
@@ -69,6 +76,7 @@ object WitherDragons : Module(
     val sendSpawned by BooleanSetting("Send Dragon Spawned", true, desc = "Sends a message when a dragon has spawned.").withDependency { dragonAlerts }
     val sendSpray by BooleanSetting("Send Ice Sprayed", true, desc = "Sends a message when a dragon has been ice sprayed.").withDependency { dragonAlerts }
     val sendArrowHit by BooleanSetting("Send Arrows Hit", true, desc = "Sends a message when a dragon dies with how many arrows were hit.").withDependency { dragonAlerts }
+    val debuffTime by NumberSetting("Debuff Time", 15, 0, 60, desc = "Time in ticks before debuff arrows are considered too late.", unit = "t").withDependency { dragonAlerts && sendArrowHit }
     private val firstArrowHit by BooleanSetting("Send First Hit", false, desc = "Sends a message when a player hits their first arrow.").withDependency { dragonAlerts }
 
     private val dragonHealth by BooleanSetting("Dragon Health", true, desc = "Displays the health of M7 dragons.")
@@ -113,6 +121,7 @@ object WitherDragons : Module(
 
         onPacket<S04PacketEntityEquipment> ({ DungeonUtils.getF7Phase() == M7Phases.P5 && enabled }) {
             dragonSprayed(it)
+            if (relicAnnounce || relicAnnounceTime) relicEquipment(it)
         }
 
         onPacket<S0FPacketSpawnMob> ({ DungeonUtils.getF7Phase() == M7Phases.P5 && enabled }) {
@@ -132,12 +141,13 @@ object WitherDragons : Module(
                 if (sendNotification) modMessage("§${it.colorCode}${it.name} dragon counts.")
             }
         }
+    }
 
-        onPacket<S32PacketConfirmTransaction> {
-            WitherDragonsEnum.entries.forEach { if (it.state == WitherDragonState.SPAWNING && it.timeToSpawn > 0) it.timeToSpawn-- }
-            KingRelics.onServerTick()
-            currentTick++
-        }
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent) {
+        WitherDragonsEnum.entries.forEach { if (it.state == WitherDragonState.SPAWNING && it.timeToSpawn > 0) it.timeToSpawn-- }
+        KingRelics.onServerTick()
+        currentTick++
     }
 
     @SubscribeEvent
@@ -164,14 +174,22 @@ object WitherDragons : Module(
 
     @SubscribeEvent
     fun onArrowDespawn(event: ArrowEvent.Despawn) = WitherDragonsEnum.entries.forEach { dragon ->
-        if (dragon.state != WitherDragonState.ALIVE || currentTick - dragon.spawnedTime >= dragon.skipKillTime) return@forEach
+        if (dragon.state != WitherDragonState.ALIVE || currentTick - dragon.spawnedTime >= dragon.skipKillTime || event.owner !is EntityPlayer) return@forEach
         val hits = event.entitiesHit.filter { ((it as? EntityDragonPart)?.entityDragonObj ?: it) == dragon.entity }.size.takeUnless { it == 0 } ?: return@forEach
         runOnMCThread {
+            val timeSinceSpawn = currentTick - dragon.spawnedTime
             if (event.owner.name !in dragon.arrowsHit.keys && firstArrowHit)
-                modMessage("§a${event.owner.name} §fhit their first arrow on §${dragon.colorCode}${dragon.name}§f after §c${(currentTick - dragon.spawnedTime).let { "$it §ftick${if (it > 1) "s" else ""}" }}.")
-            dragon.arrowsHit.merge(event.owner.name, hits, Int::plus)
+                modMessage("§a${event.owner.name} §fhit their first arrow on §${dragon.colorCode}${dragon.name}§f after §c${timeSinceSpawn.let { "$it §ftick${if (it > 1) "s" else ""}" }}.")
+
+            val hit = dragon.arrowsHit.getOrPut(event.owner.name) { ArrowsHit() }
+            if (event.owner.heldItem?.skyblockID in validShortBowIds || timeSinceSpawn <= debuffTime) hit.good += hits
+            else hit.late += hits
         }
     }
+
+    private val validShortBowIds = setOf( // we cant just check if the item is a shortbow from lore, since lore isnt sent for other players held item.
+        "TERMINATOR", "MOSQUITO_BOW"
+    )
 
     private fun getDragonTimer(spawnTime: Int): String = when {
         spawnTime <= 20 -> "§c"

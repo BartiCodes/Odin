@@ -32,16 +32,17 @@ object MapInfo : Module(
                 "§7-§e${if (fullRemaining != 0 || (fullAddRemaining && alternate)) DungeonUtils.neededSecretsAmount else (DungeonUtils.neededSecretsAmount - DungeonUtils.secretCount).coerceAtLeast(0)}"+
                 "§7-§c${DungeonUtils.totalSecrets}"
         val unknownSecretsText = if (unknown == 0) "§7Deaths: §c${colorizeDeaths(DungeonUtils.deathCount)}" else "§7Unfound: §e${(DungeonUtils.totalSecrets - DungeonUtils.knownSecrets).coerceAtLeast(0)}"
-        val mimicText = "§7Mimic: ${if (DungeonUtils.mimicKilled) "§a✔" else "§c✘"}"
+        val mimicText = "§7M: ${if (DungeonUtils.mimicKilled) "§a✔" else "§c✘"} §8| §7P: ${if (DungeonUtils.princeKilled) "§a✔" else "§c✘"}"
         val cryptText = "§7Crypts: ${colorizeCrypts(DungeonUtils.cryptCount.coerceAtMost(5))}"
 
-        val (trText, brText) = if (alternate) listOf(cryptText, scoreText) else listOf(scoreText, cryptText)
+        val trText = if (alternate) cryptText else scoreText
+        val brText = if (alternate) scoreText else cryptText
 
         if (fullBackground) Gui.drawRect((-fullMargin).toInt(), 0, (fullWidth + (fullMargin * 2)).toInt(), 19, fullColor.rgba)
         val brWidth = getTextWidth(brText)
-        val trWidth = getTextWidth(trText)
+
         RenderUtils.drawText(secretText, 1f, 1f, Colors.WHITE)
-        RenderUtils.drawText(trText, fullWidth - 1f - trWidth, 1f, Colors.WHITE)
+        RenderUtils.drawText(trText, fullWidth - 1f - getTextWidth(trText), 1f, Colors.WHITE)
         val unknownWidth = drawStringWidth(unknownSecretsText, 1, 10, Colors.WHITE)
         val centerX = (unknownWidth + 1 + (fullWidth - 1 - unknownWidth - brWidth) / 2) - getTextWidth(mimicText) / 2
         RenderUtils.drawText(mimicText, centerX, 10f, Colors.WHITE)
@@ -79,7 +80,8 @@ object MapInfo : Module(
 
     private val compactScore: HudElement by HUD("Compact Score", "Displays a compact score hud with score info.") {
         if ((!DungeonUtils.inDungeons || (disableInBoss && DungeonUtils.inBoss)) && !it) return@HUD 0f to 0f
-        val scoreText = "§7Score: ${colorizeScore(DungeonUtils.score)}" + if (!DungeonUtils.mimicKilled) " §7(§6+2?§7)" else ""
+        val missing = (if (DungeonUtils.mimicKilled) 0 else 2) + (if (DungeonUtils.princeKilled) 0 else 1)
+        val scoreText = "§7Score: ${colorizeScore(DungeonUtils.score)}" + if (missing > 0) " §7(§6+${missing}?§7)" else ""
         val width = getTextWidth(scoreText)
         if (compactScoreBackground) Gui.drawRect((-compactScoreMargin).toInt(), 0, (width + 2 + (compactScoreMargin * 2)).toInt(), 9, compactScoreColor.rgba)
         RenderUtils.drawText(scoreText, 1f, 1f, Colors.WHITE)

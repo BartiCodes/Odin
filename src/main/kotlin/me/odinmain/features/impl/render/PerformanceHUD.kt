@@ -7,6 +7,7 @@ import me.odinmain.features.Module
 import me.odinmain.utils.ServerUtils
 import me.odinmain.utils.render.Color
 import me.odinmain.utils.render.Colors
+import me.odinmain.utils.toFixed
 import me.odinmain.utils.ui.drawStringWidth
 
 object PerformanceHUD : Module(
@@ -24,44 +25,25 @@ object PerformanceHUD : Module(
 
     private val hud by HUD("Performance HUD", "Shows performance information on the screen.") {
         if (!showFPS && !showTPS && !showPing) return@HUD 0f to 0f
-        // if direction is vertical, this is max width otherwise use as current_x
+
         var width = 1f
         var height = 1f
+        val lineHeight = mc.fontRendererObj.FONT_HEIGHT
 
-        if (showFPS) {
-            val x = if (direction == HORIZONTAL) width else 1f
-            val w = drawText("FPS: ", "${mc.debug?.split(" ")?.get(0)?.toIntOrNull() ?: 0} ", x, height)
-            if (direction == HORIZONTAL) {
-                width += w
-            } else {
+        fun renderMetric(label: String, value: String) {
+            val w = drawText(label, value, if (direction == HORIZONTAL) width else 1f, height)
+            if (direction == HORIZONTAL) width += w
+            else {
                 width = maxOf(width, w)
-                height += mc.fontRendererObj.FONT_HEIGHT
+                height += lineHeight
             }
         }
-        if (showTPS) {
-            val x = if (direction == HORIZONTAL) width else 1f
-            val w = drawText("TPS: ", "${ServerUtils.averageTps.toInt()} ", x, height)
-            if (direction == HORIZONTAL) {
-                width += w
-            } else {
-                width = maxOf(width, w)
-                height += mc.fontRendererObj.FONT_HEIGHT
-            }
-        }
-        if (showPing) {
-            val x = if (direction == HORIZONTAL) width else 1f
-            val w = drawText("Ping: ", "${ServerUtils.averagePing.toInt()}ms ", x, height)
-            if (direction == HORIZONTAL) {
-                width += w
-            } else {
-                width = maxOf(width, w)
-                height += mc.fontRendererObj.FONT_HEIGHT
-            }
-        }
-        if (direction == HORIZONTAL) {
-            height = mc.fontRendererObj.FONT_HEIGHT.toFloat()
-        }
-        width to height
+
+        if (showFPS) renderMetric("FPS: ", "${mc.debug?.split(" ")?.get(0)?.toIntOrNull() ?: 0} ")
+        if (showTPS) renderMetric("TPS: ", "${ServerUtils.averageTps.toFixed(1)} ")
+        if (showPing) renderMetric("Ping: ", "${ServerUtils.averagePing.toInt()}ms ")
+
+        width to if (direction == HORIZONTAL) lineHeight else height
     }
 
     private fun drawText(name: String, value: String, x: Float, y: Float): Float {

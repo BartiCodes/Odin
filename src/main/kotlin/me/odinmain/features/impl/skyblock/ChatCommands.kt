@@ -7,10 +7,7 @@ import me.odinmain.clickgui.settings.impl.ListSetting
 import me.odinmain.events.impl.MessageSentEvent
 import me.odinmain.features.Module
 import me.odinmain.features.impl.dungeon.DungeonRequeue.disableRequeue
-import me.odinmain.utils.ServerUtils
-import me.odinmain.utils.capitalizeFirst
-import me.odinmain.utils.noControlCodes
-import me.odinmain.utils.runIn
+import me.odinmain.utils.*
 import me.odinmain.utils.skyblock.*
 import net.minecraft.event.ClickEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -52,8 +49,8 @@ object ChatCommands : Module(
     private val time by BooleanSetting("Time", false, desc = "Sends the current time.").withDependency { showSettings }
     private val demote by BooleanSetting("Demote", false, desc = "Executes the /party demote command.").withDependency { showSettings }
     private val promote by BooleanSetting("Promote", false, desc = "Executes the /party promote command.").withDependency { showSettings }
-    private val location by BooleanSetting("Location", true, desc = "Sends your current location.").withDependency { showSettings }
-    private val holding by BooleanSetting("Holding", true, desc = "Sends the item you are holding.").withDependency { showSettings }
+    private val location by BooleanSetting("Location", false, desc = "Sends your current location.").withDependency { showSettings }
+    private val holding by BooleanSetting("Holding", false, desc = "Sends the item you are holding.").withDependency { showSettings }
 
     private val dtReason = mutableListOf<Pair<String, String>>()
     val blacklist: MutableList<String> by ListSetting("Blacklist", mutableListOf())
@@ -113,23 +110,24 @@ object ChatCommands : Module(
             "8ball" -> if (eightball) channelMessage(responses.random(), name, channel)
             "dice" -> if (dice) channelMessage((1..6).random(), name, channel)
             "racism" -> if (racism) channelMessage("$name is ${Random.nextInt(1, 101)}% racist. Racism is not allowed!", name, channel)
-            "ping" -> if (ping) channelMessage("Current Ping: ${floor(ServerUtils.averagePing).toInt()}ms", name, channel)
-            "tps" -> if (tps) channelMessage("Current TPS: ${ServerUtils.averageTps.toInt()}", name, channel)
-            "fps" -> if (fps) channelMessage("Current FPS: ${mc.debug.split(" ")[0].toIntOrNull() ?: 0}", name, channel)
-            "time" -> if (time) channelMessage("Current Time: ${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"))}", name, channel)
-            "location" -> if (location) channelMessage("Current Location: ${LocationUtils.currentArea.displayName}", name, channel)
+            "ping" -> if (ping) channelMessage("Ping: ${floor(ServerUtils.averagePing).toInt()}ms", name, channel)
+            "tps" -> if (tps) channelMessage("TPS: ${ServerUtils.averageTps.toFixed(1)}", name, channel)
+            "fps" -> if (fps) channelMessage("FPS: ${mc.debug.split(" ")[0].toIntOrNull() ?: 0}", name, channel)
+            "time" -> if (time) channelMessage("Time: ${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z"))}", name, channel)
+            "location" -> if (location) channelMessage("Location: ${LocationUtils.currentArea.displayName}", name, channel)
             "holding" -> if (holding) channelMessage("Holding: ${mc.thePlayer?.heldItem?.displayName?.noControlCodes ?: "Nothing :("}", name, channel)
 
             // Party cmds only
-            "warp", "w" -> if (warp && channel == ChatChannel.PARTY) sendCommand("p warp")
-            "warptransfer", "wt" -> if (warptransfer && channel == ChatChannel.PARTY) {
+            "warp", "w" -> if (warp && channel == ChatChannel.PARTY && PartyUtils.isLeader()) sendCommand("p warp")
+            "warptransfer", "wt" -> if (warptransfer && channel == ChatChannel.PARTY && PartyUtils.isLeader()) {
                 sendCommand("p warp")
                 runIn(12) {
                     sendCommand("p transfer $name")
                 }
             }
-            "allinvite", "allinv" -> if (allinvite && channel == ChatChannel.PARTY) sendCommand("p settings allinvite")
-            "pt", "ptme", "transfer" -> if (pt && channel == ChatChannel.PARTY) sendCommand("p transfer ${words.getOrNull(1) ?: name}")
+            "allinvite", "allinv" -> if (allinvite && channel == ChatChannel.PARTY && PartyUtils.isLeader()) sendCommand("p settings allinvite")
+            "pt", "ptme", "transfer" -> if (pt && channel == ChatChannel.PARTY && PartyUtils.isLeader())
+                sendCommand("p transfer ${words.getOrNull(1)?.let { findPartyMember(it) } ?: name}")
             "downtime", "dt" -> {
                 if (!dt || channel != ChatChannel.PARTY) return
                 val reason = words.drop(1).joinToString(" ").takeIf { it.isNotBlank() } ?: "No reason given"
@@ -146,13 +144,14 @@ object ChatCommands : Module(
                 if (dtReason.isEmpty()) disableRequeue = false
             }
             "f1", "f2", "f3", "f4", "f5", "f6", "f7", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "t1", "t2", "t3", "t4", "t5" -> {
-                if (!queInstance || channel != ChatChannel.PARTY) return
+                if (!queInstance || channel != ChatChannel.PARTY || !PartyUtils.isLeader()) return
                 modMessage("§8Entering -> §e${words[0].capitalizeFirst()}")
                 sendCommand("od ${words[0].lowercase()}", true)
             }
-            "demote" -> if (demote && channel == ChatChannel.PARTY) sendCommand("p demote $name")
-            "promote" -> if (promote && channel == ChatChannel.PARTY) sendCommand("p promote $name")
-            "kick", "k" -> if (kick && channel == ChatChannel.PARTY) words.getOrNull(1)?.let { sendCommand("p kick $it") }
+            "demote" -> if (demote && channel == ChatChannel.PARTY && PartyUtils.isLeader()) sendCommand("p demote $name")
+            "promote" -> if (promote && channel == ChatChannel.PARTY && PartyUtils.isLeader()) sendCommand("p promote $name")
+            "kick", "k" -> if (kick && channel == ChatChannel.PARTY && PartyUtils.isLeader())
+                words.getOrNull(1)?.let { sendCommand("p kick ${words.getOrNull(1)?.let { findPartyMember(it) ?: it } ?: name}") }
 
             // Private cmds only
             "invite", "inv" -> if (invite && channel == ChatChannel.PRIVATE) {
@@ -163,9 +162,14 @@ object ChatCommands : Module(
         }
     }
 
+    private fun findPartyMember(partialName: String): String? {
+        val partialNameLower = partialName.lowercase()
+        return PartyUtils.partyMembers.find { it.lowercase().contains(partialNameLower) }
+    }
+
     @SubscribeEvent
     fun onMessageSent(event: MessageSentEvent) {
-        if (!chatEmotes ||( event.message.startsWith("/") && !listOf("/pc", "/ac", "/gc", "/msg", "/w", "/r").any { event.message.startsWith(it) })) return
+        if (!chatEmotes || (event.message.startsWith("/") && !listOf("/pc", "/ac", "/gc", "/msg", "/w", "/r").any { event.message.startsWith(it) })) return
 
         var replaced = false
         val words = event.message.split(" ").toMutableList()
