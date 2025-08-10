@@ -83,13 +83,13 @@ object TerminalTimes : Module(
     private inline val Long.seconds
         get() = ((if (useRealTime) System.currentTimeMillis() else currentTick) - this) / 1000.0
 
-    private fun resetSection(full: Boolean = false) {
-        if (full) {
-            times.clear()
-            phaseTimer = if (useRealTime) System.currentTimeMillis() else currentTick
-        } else times.add(sectionTimer.seconds)
-        completed = Pair(0, 7)
-        sectionTimer = if (useRealTime) System.currentTimeMillis() else currentTick
-        gateBlown = false
+    fun resetSection(full: Boolean = false) { // remove `private`
+    if (full) {
+        times.clear()
+        phaseTimer = if (useRealTime) System.currentTimeMillis() else currentTick
+    } else times.add(sectionTimer.seconds)
+    completed = Pair(0, 7)
+    sectionTimer = if (useRealTime) System.currentTimeMillis() else currentTick
+    gateBlown = false
     }
 }
