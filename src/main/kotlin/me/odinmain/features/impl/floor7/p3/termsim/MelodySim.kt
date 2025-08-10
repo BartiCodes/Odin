@@ -1,12 +1,17 @@
 package me.odinmain.features.impl.floor7.p3.termsim
 
 import me.odinmain.events.impl.TerminalEvent
+import me.odinmain.events.impl.GuiEvent
 import me.odinmain.features.impl.floor7.p3.TerminalSolver
 import me.odinmain.features.impl.floor7.p3.TerminalTypes
 import me.odinmain.utils.postAndCatch
 import net.minecraft.inventory.Slot
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
+import net.minecraft.client.gui.inventory.GuiChest
+import net.minecraft.inventory.ContainerChest
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
+import org.lwjgl.input.Keyboard
 
 object MelodySim : TermSimGUI(
     TerminalTypes.MELODY.windowName, TerminalTypes.MELODY.windowSize
@@ -68,6 +73,19 @@ object MelodySim : TermSimGUI(
             else -> blackPane
         }
     }
+
+    @SubscribeEvent
+    fun onGuiKeyPress(event: GuiEvent.KeyPress) {
+        val gui = event.gui as? GuiChest ?: return
+        val chest = gui.inventorySlots as? ContainerChest ?: return
+
+        // Ensure this is the MelodySim GUI
+        if (chest.name != TerminalTypes.MELODY.windowName) return
+
+        // Press E to reset
+        if (event.key == Keyboard.KEY_E) {
+            create()
+            event.isCanceled = true // prevent closing the inventory
+        }
+    }
 }
-
-
