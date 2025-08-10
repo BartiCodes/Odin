@@ -84,13 +84,7 @@ object MelodySim : TermSimGUI(
         if (event.key == Keyboard.KEY_E) {
             // Reset puzzle
             create()
-
-            // Reset tracker timer
-            TerminalSolver.lastTermOpened?.let {
-                it.timeOpened = System.currentTimeMillis()
-                TerminalEvent.Opened(it).postAndCatch()
-            }
-
+            TerminalTimes.resetSection(true) // reset the times tracker
             // Prevent GUI from closing
             event.isCanceled = true
         }
