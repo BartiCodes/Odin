@@ -4,6 +4,7 @@ import me.odinmain.events.impl.TerminalEvent
 import me.odinmain.events.impl.GuiEvent
 import me.odinmain.features.impl.floor7.p3.TerminalSolver
 import me.odinmain.features.impl.floor7.p3.TerminalTypes
+import me.odinmain.features.impl.floor7.p3.TerminalTimes
 import me.odinmain.utils.name
 import me.odinmain.utils.postAndCatch
 import net.minecraft.client.gui.inventory.GuiChest
