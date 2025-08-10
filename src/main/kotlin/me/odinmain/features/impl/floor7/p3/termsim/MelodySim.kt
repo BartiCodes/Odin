@@ -4,13 +4,13 @@ import me.odinmain.events.impl.TerminalEvent
 import me.odinmain.events.impl.GuiEvent
 import me.odinmain.features.impl.floor7.p3.TerminalSolver
 import me.odinmain.features.impl.floor7.p3.TerminalTypes
-import me.odinmain.utils.postAndCatch
 import me.odinmain.utils.name
+import me.odinmain.utils.postAndCatch
+import net.minecraft.client.gui.inventory.GuiChest
 import net.minecraft.inventory.Slot
+import net.minecraft.inventory.ContainerChest
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
-import net.minecraft.client.gui.inventory.GuiChest
-import net.minecraft.inventory.ContainerChest
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.input.Keyboard
 
@@ -79,14 +79,20 @@ object MelodySim : TermSimGUI(
     fun onGuiKeyPress(event: GuiEvent.KeyPress) {
         val gui = event.gui as? GuiChest ?: return
         val chest = gui.inventorySlots as? ContainerChest ?: return
-
-        // Ensure this is the MelodySim GUI
         if (chest.name != TerminalTypes.MELODY.windowName) return
 
-        // Press E to reset
         if (event.key == Keyboard.KEY_E) {
+            // Reset puzzle
             create()
-            event.isCanceled = true // prevent closing the inventory
+
+            // Reset tracker timer
+            TerminalSolver.lastTermOpened?.let {
+                it.timeOpened = System.currentTimeMillis()
+                TerminalEvent.Opened(it).postAndCatch()
+            }
+
+            // Prevent GUI from closing
+            event.isCanceled = true
         }
     }
 }
