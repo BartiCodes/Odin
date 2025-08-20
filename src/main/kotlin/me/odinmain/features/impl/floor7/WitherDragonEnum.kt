@@ -11,8 +11,6 @@ import me.odinmain.features.impl.floor7.WitherDragons.sendArrowHit
 import me.odinmain.features.impl.floor7.WitherDragons.sendSpawned
 import me.odinmain.features.impl.floor7.WitherDragons.sendSpawning
 import me.odinmain.features.impl.floor7.WitherDragons.sendTime
-import me.odinmain.features.impl.skyblock.ArrowHit.onDragonSpawn
-import me.odinmain.features.impl.skyblock.ArrowHit.resetOnDragons
 import me.odinmain.utils.render.Color
 import me.odinmain.utils.render.Colors
 import me.odinmain.utils.runIn
@@ -64,7 +62,6 @@ enum class WitherDragonsEnum (
         isSprayed = false
         arrowsHit.clear()
 
-        if (resetOnDragons && WitherDragons.enabled) onDragonSpawn()
         if (sendArrowHit && WitherDragons.enabled) {
             runIn(skipKillTime, true) {
                 if (entity?.isEntityAlive == true) modMessage("§fArrows Hit on §${colorCode}${name}§f in §c${(skipKillTime / 20f).toFixed()}s§7: ${arrowsHit.entries.joinToString(", ") { "§f${it.key}§7: §6${it.value.good}${it.value.late.let { if (it > 0) " §8(§7${it}§8)" else "" }}§7" }}.")
@@ -92,7 +89,7 @@ enum class WitherDragonsEnum (
         if (priorityDragon == this) priorityDragon = None
 
         if (sendTime && WitherDragons.enabled)
-            dragonPBs.time(ordinal, (currentTick - spawnedTime) / 20.0, "s§7!", "§${colorCode}${name} §7was alive for §6", addPBString = true, addOldPBString = true)
+            dragonPBs.time(ordinal, (currentTick - spawnedTime) / 20.0, "s§7!", "§${colorCode}${name} §7was alive for §6")
     }
 
     fun updateEntity(entityId: Int) {
